@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow">
+        <div class="card-body">
+            <h2 class="mb-4">Добавить новую книгу</h2>
+
+            {% include 'partials/flash_messages.html' %}
+
+            <form method="POST" enctype="multipart/form-data" class="needs-validation" novalidate>
+                <div class="mb-3">
+                    <label for="country" class="form-label">Страна*</label>
+                    <input type="text" class="form-control" id="country" name="country" required>
+                    <div class="invalid-feedback">Пожалуйста, укажите страну автора</div>
+                    <div class="form-text">Например: Россия, США, Франция</div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="author" class="form-label">Автор*</label>
+                    <input type="text" class="form-control" id="author" name="author" required>
+                    <div class="invalid-feedback">Пожалуйста, укажите автора</div>
+                    <div class="form-text">ФИО автора, например: Лев Толстой</div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="title" class="form-label">Название книги*</label>
+                    <input type="text" class="form-control" id="title" name="title" required>
+                    <div class="invalid-feedback">Пожалуйста, введите название</div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="description" class="form-label">Описание (необязательно)</label>
+                    <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label for="file" class="form-label">Файл книги*</label>
+                    <input class="form-control" type="file" id="file" name="file" accept=".txt,.pdf,.docx,.epub" required>
+                    <div class="invalid-feedback">Выберите файл книги</div>
+                    <div class="form-text">Поддерживаемые форматы: TXT, PDF, DOCX, EPUB (макс. 50MB)</div>
+                </div>
+
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Отмена</a>
+                    <button type="submit" class="btn btn-primary">Загрузить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Валидация формы на клиенте
+(function() {
+    'use strict'
+    const forms = document.querySelectorAll('.needs-validation')
+    Array.from(forms).forEach(form => {
+        form.addEventListener('submit', function(event) {
+            if (!form.checkValidity()) {
+                event.preventDefault()
+                event.stopPropagation()
+            }
+            form.classList.add('was-validated')
+        }, false)
+    })
+})()
+</script>
+{% endblock %}

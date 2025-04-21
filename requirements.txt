@@ -1,0 +1,14 @@
+Flask==2.3.2
+Flask-Bootstrap==3.3.7.1
+Flask-Login==0.6.2
+Flask-Migrate==4.0.4
+Flask-SQLAlchemy==3.0.3
+pymorphy2==0.9.1
+python-docx==0.8.11
+PyPDF2==3.0.1
+ebooklib==0.17.1
+watchdog==3.0.0
+celery==5.3.1
+redis==4.5.5
+chardet==5.1.0
+beautifulsoup4==4.12.2
