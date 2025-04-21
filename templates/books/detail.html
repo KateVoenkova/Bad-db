@@ -1,63 +1,122 @@
 {% extends "base.html" %}
 
-{% block title %}{{ book.title }}{% endblock %}
-
 {% block content %}
-<div class="card shadow">
-    <div class="card-header bg-white">
-        <div class="d-flex justify-content-between align-items-center">
-            <h2>
-                {% if edit_mode %}
-                    <input type="text" name="title" value="{{ book.title }}" class="form-control form-control-lg" form="book-edit-form">
-                {% else %}
-                    {{ book.title }}
-                {% endif %}
-            </h2>
-            <a href="{{ url_for('library') }}" class="btn btn-outline-secondary">← Назад</a>
-        </div>
-
-        {% if edit_mode %}
-            <textarea name="description" class="form-control mt-2" rows="3" form="book-edit-form">{{ book.description }}</textarea>
-        {% else %}
-            <p class="text-muted mt-2">{{ book.description }}</p>
-        {% endif %}
-    </div>
-
-    <div class="card-body">
-        <div class="d-flex gap-2 mb-4">
-            <a href="{{ url_for('show_graph', book_id=book.id) }}" class="btn btn-info">Граф связей</a>
-            <a href="{{ url_for('manage_characters', book_id=book.id) }}" class="btn btn-primary">Персонажи</a>
-            <a href="{{ url_for('view_analyses', book_id=book.id) }}" class="btn btn-info">Рецензии</a>
-
-            {% if current_user.id == book.user_id or current_user.is_admin %}
-                {% if edit_mode %}
-                    <form method="POST" action="{{ url_for('edit_book', book_id=book.id) }}" id="book-edit-form">
-                        <button type="submit" class="btn btn-success">Сохранить</button>
-                    </form>
-                    <a href="{{ url_for('book_page', book_id=book.id) }}" class="btn btn-secondary">Отмена</a>
-                {% else %}
-                    <a href="{{ url_for('book_page', book_id=book.id) }}?edit=true" class="btn btn-warning">Изменить</a>
-                {% endif %}
-            {% endif %}
-        </div>
-
-        <h4>Персонажи:</h4>
-        <div class="row row-cols-1 row-cols-md-3 g-4">
-            {% for character in book.characters %}
-            <div class="col">
-                <div class="card h-100">
-                    <div class="card-body">
-                        <h5 class="card-title">{{ character.name }}</h5>
-                        <p class="card-text">{{ character.description|default('Описание отсутствует', true) }}</p>
-                        <a href="{{ url_for('character_details', character_id=character.id) }}"
-                           class="btn btn-sm btn-primary">
-                            Подробнее
+<div class="container-fluid">
+    <div class="row">
+        <!-- Боковое меню с оглавлением -->
+        <div class="col-md-3 col-lg-2 d-md-block bg-light sidebar">
+            <div class="position-sticky pt-3">
+                <h4 class="sidebar-heading px-3 mt-4 mb-1 text-muted">
+                    <span>Оглавление</span>
+                </h4>
+                <ul class="nav flex-column">
+                    {% for chapter in chapters %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if loop.index0 == current_chapter_id %}active font-weight-bold{% endif %}"
+                           href="{{ url_for('book_page', book_id=book.id, chapter_id=loop.index0) }}">
+                            {{ chapter.title }}
                         </a>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+
+        <!-- Основное содержимое -->
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h1 class="h2">{{ book.title }}</h1>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <div class="btn-group me-2">
+                        <div class="book-content">
+                            <h3>Полный текст произведения</h3>
+                            <div class="text-content">
+                                {{ full_text|safe }}
+                            </div>
+                        </div>
+                        <a href="{{ url_for('book_characters', book_id=book.id) }}"
+                           class="btn btn-sm btn-outline-secondary">
+                            Персонажи
+                        </a>
+                        {% if current_user.is_authenticated and (current_user.id == book.user_id or current_user.is_admin) %}
+                        <a href="{{ url_for('book_page', book_id=book.id, edit='true') }}"
+                           class="btn btn-sm btn-outline-primary">
+                            Редактировать
+                        </a>
+                        {% endif %}
                     </div>
                 </div>
             </div>
-            {% endfor %}
-        </div>
+
+            <div class="book-content">
+                {% if not current_chapter %}
+                    <div class="alert alert-warning">
+                        Текст книги не загружен или не может быть отображен.
+                    </div>
+                {% else %}
+                    <h2>{{ current_chapter.title }}</h2>
+                    <div class="chapter-text">
+                        {{ current_chapter.text | safe | replace('\n', '<br>') }}
+                    </div>
+
+                    <!-- Навигация между главами -->
+                    <nav aria-label="Chapter navigation">
+                        <ul class="pagination justify-content-center mt-4">
+                            {% if current_chapter_id > 0 %}
+                            <li class="page-item">
+                                <a class="page-link"
+                                   href="{{ url_for('book_page', book_id=book.id, chapter_id=current_chapter_id-1) }}">
+                                    Предыдущая глава
+                                </a>
+                            </li>
+                            {% endif %}
+
+                            {% if current_chapter_id < chapters|length - 1 %}
+                            <li class="page-item">
+                                <a class="page-link"
+                                   href="{{ url_for('book_page', book_id=book.id, chapter_id=current_chapter_id+1) }}">
+                                    Следующая глава
+                                </a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                {% endif %}
+            </div>
+        </main>
     </div>
 </div>
+
+<style>
+.sidebar {
+    position: -webkit-sticky;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    border-right: 1px solid #eee;
+}
+
+.chapter-text {
+    font-size: 1.1rem;
+    line-height: 1.8;
+    white-space: pre-line;
+    padding: 20px 0;
+}
+
+.nav-link.active {
+    color: #0d6efd;
+    background-color: rgba(13, 110, 253, 0.1);
+}
+
+@media (max-width: 767.98px) {
+    .sidebar {
+        height: auto;
+        position: relative;
+    }
+    main {
+        padding: 15px !important;
+    }
+}
+</style>
 {% endblock %}

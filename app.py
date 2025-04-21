@@ -14,6 +14,10 @@ from werkzeug.utils import secure_filename
 from functools import wraps
 import logging
 from tasks import celery, init_celery
+import chardet
+from ebooklib import epub
+from bs4 import BeautifulSoup
+import zipfile
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-123'
@@ -154,6 +158,38 @@ def library():
     return render_template('books/library.html', books=books)
 
 
+@app.route('/books/<int:book_id>')
+@app.route('/books/<int:book_id>/chapter/<int:chapter_id>')
+def book_page(book_id, chapter_id=None):
+    book = Book.query.get_or_404(book_id)
+    edit_mode = request.args.get('edit', 'false').lower() == 'true'
+
+    if request.method == 'POST':
+        if book.user_id != current_user.id and not current_user.is_admin:
+            flash('Доступ запрещен', 'danger')
+            return redirect(url_for('library'))
+
+        book.title = request.form['title']
+        book.description = request.form['description']
+        db.session.commit()
+        flash('Изменения сохранены', 'success')
+        return redirect(url_for('book_page', book_id=book.id))
+
+    # Получаем структуру книги или создаем простую, если нет структуры
+    if book.content_structure:
+        chapters = book.content_structure
+    elif book.content:
+        chapters = [{'title': 'Полный текст', 'text': book.content}]
+    else:
+        chapters = []
+
+    return render_template('books/detail.html',
+                         book=book,
+                         chapters=chapters,
+                         current_chapter_id=chapter_id or 0,
+                         edit_mode=edit_mode)
+
+
 @app.route('/upload', methods=['GET', 'POST'])
 @login_required
 def upload():
@@ -243,27 +279,6 @@ def upload():
 
     return render_template('books/upload.html')
 
-@app.route('/books/<int:book_id>', methods=['GET', 'POST'])
-def book_page(book_id):
-    book = Book.query.filter_by(id=book_id, is_deleted=False).first_or_404()
-    edit_mode = request.args.get('edit', 'false').lower() == 'true'
-
-    if request.method == 'POST':
-        if book.user_id != current_user.id and not current_user.is_admin:
-            flash('Доступ запрещен', 'danger')
-            return redirect(url_for('library'))
-
-        book.title = request.form['title']
-        book.description = request.form['description']
-        db.session.commit()
-        flash('Изменения сохранены', 'success')
-        return redirect(url_for('book_page', book_id=book.id))
-
-    characters = Character.query.filter_by(book_id=book_id).all()
-    return render_template('books/detail.html',
-                           book=book,
-                           characters=characters,
-                           edit_mode=edit_mode)
 
 
 @app.route('/books/<int:book_id>/edit', methods=['GET', 'POST'])
@@ -304,29 +319,27 @@ def delete_book(book_id):
 def read_book(book_id):
     book = Book.query.get_or_404(book_id)
 
-    if not os.path.exists(book.file_path):
-        flash('Файл книги не найден', 'danger')
+    if not book.content:
+        flash('Текст книги не найден или еще не обработан', 'danger')
         return redirect(url_for('book_page', book_id=book.id))
 
-    try:
-        if book.file_format == 'pdf':
-            # Для PDF можно использовать PDF.js или конвертировать в текст
-            text = read_pdf_file(book.file_path)
-            return render_template('books/read.html', book=book, content=text)
+    # Получаем структуру или создаем одну главу со всем текстом
+    if book.content_structure:
+        chapters = book.content_structure
+    else:
+        chapters = [{
+            'title': 'Полный текст',
+            'text': book.content
+        }]
 
-        elif book.file_format in ['epub', 'fb2']:
-            # Для EPUB/FB2 конвертируем в HTML
-            html_content = convert_to_html(book.file_path, book.file_format)
-            return render_template('books/read.html', book=book, content=html_content)
+    current_chapter = request.args.get('chapter', 0, type=int)
+    if current_chapter >= len(chapters):
+        current_chapter = 0
 
-        else:
-            # Для TXT, DOCX и других - просто текст
-            text = read_text_file(book.file_path)
-            return render_template('books/read.html', book=book, content=text)
-
-    except Exception as e:
-        flash(f'Ошибка чтения файла: {str(e)}', 'danger')
-        return redirect(url_for('book_page', book_id=book.id))
+    return render_template('books/read.html',
+                           book=book,
+                           chapters=chapters,
+                           current_chapter=current_chapter)
 
 
 # ---------------------------
@@ -334,11 +347,13 @@ def read_book(book_id):
 # ---------------------------
 
 @app.route('/books/<int:book_id>/characters')
-@login_required
-def manage_characters(book_id):
+def book_characters(book_id):
+    """Страница с персонажами книги"""
     book = Book.query.get_or_404(book_id)
     characters = Character.query.filter_by(book_id=book_id).all()
-    return render_template('characters/manage.html', book=book, characters=characters)
+    return render_template('books/characters.html',
+                         book=book,
+                         characters=characters)
 
 
 @app.route('/characters/<int:character_id>')
@@ -551,10 +566,12 @@ def check_processing(book_id):
 #observer = None
 
 # Запуск FileWatcher
-
+def start_watcher():
+    print("[Watcher] Запуск file_watcher...")
 #observer = start_watcher()
 
 if __name__ == '__main__':
+    observer = None
     try:
         with app.app_context():
             db.create_all()

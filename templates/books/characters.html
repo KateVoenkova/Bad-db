@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Боковое меню с навигацией -->
+        <div class="col-md-3 col-lg-2 d-md-block bg-light sidebar">
+            <div class="position-sticky pt-3">
+                <a href="{{ url_for('book_page', book_id=book.id) }}"
+                   class="btn btn-outline-secondary mb-3 w-100">
+                    ← Назад к книге
+                </a>
+                <h4 class="sidebar-heading px-3 mt-4 mb-1 text-muted">
+                    Персонажи
+                </h4>
+                <ul class="nav flex-column">
+                    {% for character in characters %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="#character-{{ character.id }}">
+                            {{ character.name }}
+                        </a>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+
+        <!-- Основное содержимое -->
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h1 class="h2">Персонажи: {{ book.title }}</h1>
+            </div>
+
+            {% if not characters %}
+                <div class="alert alert-info">
+                    Персонажи не найдены или еще не обработаны.
+                </div>
+            {% else %}
+                <div class="row">
+                    {% for character in characters %}
+                    <div class="col-md-6 mb-4" id="character-{{ character.id }}">
+                        <div class="card">
+                            <div class="card-body">
+                                <h3 class="card-title">{{ character.name }}</h3>
+                                {% if character.description %}
+                                    <div class="card-text">
+                                        {{ character.description }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </main>
+    </div>
+</div>
+{% endblock %}

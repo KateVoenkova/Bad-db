@@ -4,7 +4,6 @@ from typing import List
 
 morph = MorphAnalyzer()
 
-
 def normalize_name(name: str) -> str:
     """Приводит имя к начальной форме (именительный падеж)"""
     parts = name.split()
@@ -13,61 +12,68 @@ def normalize_name(name: str) -> str:
         try:
             parsed = morph.parse(part)[0]
             normalized_parts.append(parsed.normal_form.title())
-        except:
+        except Exception:
             normalized_parts.append(part)
     return ' '.join(normalized_parts)
 
-
 def extract_all_names(text: str) -> List[str]:
-    """Улучшенное извлечение имён с поддержкой русских и иностранных имён"""
-    # Основной паттерн для русских имён (2-3 слова с заглавной буквы)
+    """Извлечение имён с поддержкой русских и англоязычных конструкций"""
+    if not text:
+        return []
+
+    # Паттерн для обычных имён (двойных или тройных)
     name_pattern = re.compile(
         r'(?<!\w)([А-ЯЁ][а-яё]+(?:\s+[А-ЯЁ][а-яё]+){1,2})(?!\w)|'
         r'(?<!\w)([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,2})(?!\w)'
     )
 
-    # Паттерн для титулов (князь, граф и т.д.)
+    # Паттерн для титулов (типа "граф Дракула")
     title_pattern = re.compile(
-        r'(?<!\w)(граф|князь|генерал|лорд|сэр|мистер|мадемуазель)\s+([А-ЯЁA-Z][а-яёa-z]+)(?!\w)'
+        r'(?<!\w)(граф|князь|генерал|барон|сэр|мистер|мисс|мадемуазель|лорд)\s+([А-ЯЁA-Z][а-яёa-z]+)(?!\w)'
     )
 
-    names = []
+    raw_names = []
 
-    # Находим обычные имена
+    # Поиск обычных имён
     for match in name_pattern.finditer(text):
         name = match.group(1) or match.group(2)
         if name:
-            names.append(name)
+            raw_names.append(name.strip())
 
-    # Находим имена с титулами
+    # Поиск титулованных имён
     for match in title_pattern.finditer(text):
-        names.append(f"{match.group(1)} {match.group(2)}")
+        full_name = f"{match.group(1).capitalize()} {match.group(2)}"
+        raw_names.append(full_name.strip())
 
-    # Фильтрация через морфологический анализатор
-    filtered_names = []
-    for name in names:
+    # Морфологическая фильтрация: только имена/фамилии/географические объекты
+    filtered = []
+    for name in raw_names:
         parts = name.split()
         valid = True
         for part in parts:
             try:
                 parsed = morph.parse(part)[0]
-                if not any(tag in str(parsed.tag) for tag in ['Name', 'Surn', 'Geox']):
+                if not any(tag in parsed.tag for tag in ['Name', 'Surn', 'Geox']):
                     valid = False
                     break
-            except:
+            except Exception:
                 valid = False
                 break
         if valid:
-            filtered_names.append(name)
+            filtered.append(name)
 
     # Нормализация и удаление дубликатов
-    normalized_names = list(set(normalize_name(name) for name in filtered_names))
+    normalized = set()
+    for name in filtered:
+        norm = normalize_name(name)
+        if len(norm.split()) >= 2:  # только имена с 2+ словами
+            normalized.add(norm)
 
-    return [name for name in normalized_names if len(name.split()) >= 2]  # Возвращаем только полные имена
-
+    return sorted(normalized)
 
 def get_names_from_file(file_path: str) -> List[str]:
-    """Чтение файла и извлечение имён с автоматическим определением кодировки"""
+    """Извлечение имён прямо из файла (в обход базы) — опциональный метод"""
+    import chardet
     with open(file_path, 'rb') as f:
         raw_data = f.read()
         encoding = chardet.detect(raw_data)['encoding']

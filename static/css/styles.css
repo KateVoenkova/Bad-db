@@ -144,3 +144,49 @@ text {
     padding: 0.5rem 1rem !important;
     font-size: 1.25rem !important;
 }
+
+/* Стили для чтения книги */
+.book-content {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.chapter-text {
+    font-family: 'Georgia', serif;
+    font-size: 1.1rem;
+    line-height: 1.8;
+    color: #333;
+}
+
+.chapter-text p {
+    margin-bottom: 1.5rem;
+}
+
+.sidebar {
+    background-color: #f8f9fa;
+    padding: 20px;
+}
+
+.sidebar .nav-link {
+    color: #495057;
+    padding: 5px 10px;
+    border-radius: 4px;
+    margin-bottom: 2px;
+}
+
+.sidebar .nav-link:hover {
+    background-color: #e9ecef;
+}
+
+.sidebar .nav-link.active {
+    color: #fff;
+    background-color: #0d6efd;
+}
+
+.book-content {
+    white-space: pre-line;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    hyphens: auto;
+}

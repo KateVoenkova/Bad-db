@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <!-- Навигация по главам -->
+        <div class="col-md-3">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Оглавление</h5>
+                </div>
+                <div class="card-body" style="max-height: 70vh; overflow-y: auto;">
+                    <ul class="list-group">
+                        {% for chapter in chapters %}
+                        <li class="list-group-item {% if loop.index0 == current_chapter %}active{% endif %}">
+                            <a href="{{ url_for('read_book', book_id=book.id, chapter=loop.index0) }}" 
+                               class="text-decoration-none {% if loop.index0 == current_chapter %}text-white{% endif %}">
+                                {{ chapter.title }}
+                            </a>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Текст главы -->
+        <div class="col-md-9">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4>{{ chapters[current_chapter].title }}</h4>
+                    <div>
+                        {% if current_chapter > 0 %}
+                        <a href="{{ url_for('read_book', book_id=book.id, chapter=current_chapter-1) }}" 
+                           class="btn btn-sm btn-outline-primary me-2">
+                            <i class="fas fa-arrow-left"></i> Назад
+                        </a>
+                        {% endif %}
+                        {% if current_chapter < chapters|length - 1 %}
+                        <a href="{{ url_for('read_book', book_id=book.id, chapter=current_chapter+1) }}"
+                           class="btn btn-sm btn-outline-primary">
+                            Вперед <i class="fas fa-arrow-right"></i>
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="book-content">
+                        {{ chapters[current_chapter].text|replace('\n', '<br>')|safe }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .book-content {
+        font-size: 1.1rem;
+        line-height: 1.6;
+        white-space: pre-line;
+    }
+    .book-content br {
+        margin-bottom: 1rem;
+        display: block;
+        content: "";
+    }
+</style>
+{% endblock %}

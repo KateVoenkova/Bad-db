@@ -9,7 +9,6 @@ def validate_name(name):
     """Валидация имён стран и авторов"""
     if not name or len(name) < 2 or len(name) > 100:
         raise ValueError("Некорректное имя. Длина должна быть от 2 до 100 символов")
-    # Разрешаем буквы, цифры, пробелы, дефисы, точки, запятые, апострофы
     if not re.match(r'^[\w\s\-.,\'а-яА-ЯёЁ]+$', name, re.UNICODE):
         raise ValueError("Некорректное имя. Допустимы только буквы, цифры, пробелы и основные знаки препинания")
 
@@ -37,7 +36,7 @@ class Author(db.Model):
     name = db.Column(db.String(100), nullable=False)
     normalized_name = db.Column(db.String(100), nullable=False, index=True)
     country_id = db.Column(db.Integer, db.ForeignKey('country.id'), nullable=False)
-    books = db.relationship('Book', backref='author', lazy=True)  # Изменено с author_obj на author
+    books = db.relationship('Book', backref='author', lazy=True)
 
     def __init__(self, **kwargs):
         super(Author, self).__init__(**kwargs)
@@ -48,7 +47,8 @@ class Book(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(255), nullable=False)
     description = db.Column(db.Text, default="")
-
+    content = db.Column(db.Text)  # Текст книги
+    content_structure = db.Column(db.JSON)  # Структура (главы)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     author_id = db.Column(db.Integer, db.ForeignKey('author.id'), nullable=False)
     is_deleted = db.Column(db.Boolean, default=False)
